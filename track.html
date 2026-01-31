@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>My Orders</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- jsPDF CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+.progress {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
+}
+.progress span {
+  flex: 1;
+  text-align: center;
+  padding: 6px;
+  border-bottom: 3px solid #ccc;
+  font-size: 14px;
+}
+.progress .active {
+  border-color: green;
+  font-weight: bold;
+}
+
+/* Success animation */
+.success {
+  color: green;
+  font-weight: bold;
+  animation: pop 0.6s ease-in-out;
+}
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.cancel-btn {
+  background: red;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.invoice-btn {
+  background: #222;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2 class="success">🎉 Order Successful</h2>
+
+<h2>My Orders</h2>
+<div id="orders"></div>
+
+<script>
+let orders = JSON.parse(localStorage.getItem("orders")) || [];
+const ordersDiv = document.getElementById("orders");
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+// 🔹 STATUS
+function getStatus(time) {
+  const diff = Date.now() - time;
+  if (diff < ONE_DAY) return "Placed";
+  if (diff < 2 * ONE_DAY) return "Shipped";
+  if (diff < 3 * ONE_DAY) return "Out for Delivery";
+  return "Delivered";
+}
+
+// 🔹 COUNTDOWN TIMER
+function countdown(time) {
+  let diff = (time + 3 * ONE_DAY) - Date.now();
+  if (diff <= 0) return "Delivered";
+
+  let d = Math.floor(diff / ONE_DAY);
+  let h = Math.floor((diff % ONE_DAY) / (1000 * 60 * 60));
+  let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  return `${d}d ${h}h ${m}m remaining`;
+}
+
+// 🔹 PROGRESS BAR
+function progressBar(status) {
+  const stages = ["Placed", "Shipped", "Out for Delivery", "Delivered"];
+  return `
+    <div class="progress">
+      ${stages.map(s =>
+        `<span class="${stages.indexOf(s) <= stages.indexOf(status) ? "active" : ""}">
+          ${s}
+        </span>`
+      ).join("")}
+    </div>
+  `;
+}
+
+// 🔹 CANCEL ORDER
+function cancelOrder(id) {
+  if (!confirm("Cancel this order?")) return;
+  orders = orders.filter(o => o.id !== id);
+  localStorage.setItem("orders", JSON.stringify(orders));
+  location.reload();
+}
+
+// 🔹 DOWNLOAD INVOICE (PDF)
+function downloadInvoice(order) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.text("EasyBuy - Invoice", 20, 20);
+  doc.text(`Order ID: ${order.id}`, 20, 30);
+  doc.text(`Date: ${new Date(order.time).toLocaleString()}`, 20, 40);
+  doc.text(`Total: ₹${order.total}`, 20, 50);
+
+  let y = 65;
+  order.items.forEach(item => {
+    doc.text(`${item.name} × ${item.qty} = ₹${item.price * item.qty}`, 20, y);
+    y += 10;
+  });
+
+  doc.save(`Invoice_${order.id}.pdf`);
+}
+
+// 🔹 DISPLAY ORDERS
+if (orders.length === 0) {
+  ordersDiv.innerHTML = "<p>No orders yet</p>";
+}
+
+orders.reverse().forEach(order => {
+  const status = getStatus(order.time);
+  const orderedDate = new Date(order.time).toLocaleString();
+  const deliveryDate = new Date(order.time + 3 * ONE_DAY).toLocaleDateString();
+
+  let itemsHTML = "";
+  order.items.forEach(item => {
+    itemsHTML += `
+      <div style="display:flex;gap:10px;">
+        <img src="${item.img}" width="50">
+        <p>${item.name} × ${item.qty}</p>
+      </div>
+    `;
+  });
+
+  ordersDiv.innerHTML += `
+    <div style="border:1px solid #ccc;padding:15px;margin:15px 0;">
+      <p><b>Order ID:</b> ${order.id}</p>
+      <p><b>Ordered:</b> ${orderedDate}</p>
+      <p><b>Estimated Delivery:</b> ${deliveryDate}</p>
+      <p><b>Countdown:</b> ${countdown(order.time)}</p>
+      <p><b>Status:</b> ${status}</p>
+
+      ${progressBar(status)}
+
+      <p><b>Total:</b> ₹${order.total}</p>
+      ${itemsHTML}
+
+      ${status === "Placed"
+        ? `<button class="cancel-btn" onclick="cancelOrder('${order.id}')">Cancel Order</button>`
+        : ""
+      }
+
+      <button class="invoice-btn" onclick='downloadInvoice(${JSON.stringify(order)})'>
+        Download Invoice
+      </button>
+    </div>
+  `;
+});
+</script>
+
+</body>
+</html>

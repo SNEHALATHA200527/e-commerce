@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>EasyBuy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="navbar">
+  <div class="logo">EasyBuy</div>
+
+  <!-- 🔍 SEARCH BAR -->
+  <input
+    type="text"
+    id="searchBox"
+    class="search"
+    placeholder="Search products..."
+    onkeyup="searchProducts()"
+  >
+
+  <div class="nav-actions">
+    <span class="nav-btn" onclick="goToOrders()">📦 My Orders</span>
+    <span class="nav-btn" onclick="goToCart()">🛒 Cart (<span id="cartCount">0</span>)</span>
+  </div>
+</header>
+
+<!-- CATEGORY BAR -->
+<nav class="category-bar">
+  <button onclick="showCategory('men')">Men</button>
+  <button onclick="showCategory('women')">Women</button>
+  <button onclick="showCategory('kids')">Kids</button>
+  <button onclick="showCategory('electronics')">Electronics</button>
+</nav>
+
+<!-- PRODUCTS -->
+<section id="products" class="products"></section>
+
+<script src="script.js"></script>
+</body>
+</html>

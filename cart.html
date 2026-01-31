@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cart</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>Your Cart</h2>
+<div id="cartItems"></div>
+
+<h3>Total: ₹<span id="total">0</span></h3>
+<button onclick="placeOrder()">Place Order</button>
+
+<script>
+let rawCart = JSON.parse(localStorage.getItem("cart")) || [];
+let orders = JSON.parse(localStorage.getItem("orders")) || [];
+
+/* 🔥 STEP 1: MERGE SAME PRODUCTS */
+let cart = [];
+
+rawCart.forEach(item => {
+  let existing = cart.find(
+    p => p.name === item.name && p.img === item.img
+  );
+
+  if (existing) {
+    existing.qty += item.qty || 1;
+  } else {
+    cart.push({
+      ...item,
+      qty: item.qty || 1
+    });
+  }
+});
+
+/* 🔥 SAVE CLEAN CART BACK */
+localStorage.setItem("cart", JSON.stringify(cart));
+
+const cartDiv = document.getElementById("cartItems");
+const totalSpan = document.getElementById("total");
+
+function renderCart() {
+  cartDiv.innerHTML = "";
+  let grandTotal = 0;
+
+  cart.forEach((item, i) => {
+    let itemTotal = item.price * item.qty;
+    grandTotal += itemTotal;
+
+    cartDiv.innerHTML += `
+      <div class="cart-item" style="display:flex;gap:20px;align-items:center;">
+        <img src="${item.img}" width="120">
+
+        <div>
+          <p><b>${item.name.toUpperCase()}</b></p>
+          <p>₹${item.price} × ${item.qty}</p>
+
+          <div>
+            <button onclick="changeQty(${i}, -1)">-</button>
+            <span>${item.qty}</span>
+            <button onclick="changeQty(${i}, 1)">+</button>
+          </div>
+
+          <p><b>Subtotal:</b> ₹${itemTotal}</p>
+          <button onclick="removeItem(${i})">Remove</button>
+        </div>
+      </div>
+      <hr>
+    `;
+  });
+
+  totalSpan.innerText = grandTotal;
+}
+
+function changeQty(index, change) {
+  cart[index].qty += change;
+
+  if (cart[index].qty <= 0) {
+    cart.splice(index, 1);
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  renderCart();
+}
+
+function removeItem(index) {
+  cart.splice(index, 1);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  renderCart();
+}
+
+function placeOrder() {
+  if (cart.length === 0) {
+    alert("Cart is empty");
+    return;
+  }
+
+  let total = cart.reduce(
+    (sum, item) => sum + item.price * item.qty, 0
+  );
+
+  orders.push({
+    id: "ORD" + Date.now(),
+    items: cart,
+    total: total,
+    time: Date.now()
+  });
+
+  localStorage.setItem("orders", JSON.stringify(orders));
+  localStorage.removeItem("cart");
+
+  alert("Order placed successfully!");
+  window.location.href = "track.html";
+}
+
+renderCart();
+</script>
+
+</body>
+</html>
